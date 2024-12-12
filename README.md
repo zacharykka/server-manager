@@ -26,6 +26,13 @@ Power by
   - `repository`: Implements data storage interfaces
 - `scripts`: Scripts for development
 
-
 ### 1.2 APIs
+
+## 2. Deployment
+
+
+## 3. Development
+
+
+## 4. License
 
