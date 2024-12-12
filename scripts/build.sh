@@ -23,4 +23,4 @@ else
 fi
 
 # build the application
-go build -o ansible-api cmd/api/main.go
+go build -o ansible-api cmd/server-manager/main.go
