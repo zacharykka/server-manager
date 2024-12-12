@@ -8,7 +8,6 @@ Power by
 - [gin](https://github.com/gin-gonic/gin)
 - [gorm](https://github.com/go-gorm/gorm)
 - [go-ansible](https://github.com/apenella/go-ansible)
-- [redis](https://github.com/redis/go-redis)
 - [viper](https://github.com/spf13/viper)
 - [zap](https://github.com/uber-go/zap)
 
