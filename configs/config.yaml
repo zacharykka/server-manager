@@ -1,0 +1,18 @@
+service: 
+  address: 127.0.0.1
+  port: 12340
+  log_level: debug
+  log_dir: /var/log/
+database:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: root
+  dbname: server_manager
+cache:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+auth:
+  jwt_secret: "your-jwt-secret"
+  jwt_expiration: 24
