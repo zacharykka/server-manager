@@ -42,3 +42,20 @@ func NotFound(c *gin.Context, message string) {
 func InternalServerError(c *gin.Context, message string) {
 	Error(c, http.StatusInternalServerError, message)
 }
+
+// SuccessResponse 成功响应结构 (用于返回JSON数据而不是直接写入响应)
+func SuccessResponse(message string, data interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"success": true,
+		"message": message,
+		"data":    data,
+	}
+}
+
+// ErrorResponse 错误响应结构 (用于返回JSON数据而不是直接写入响应)
+func ErrorResponse(message string) map[string]interface{} {
+	return map[string]interface{}{
+		"success": false,
+		"error":   message,
+	}
+}
