@@ -27,6 +27,7 @@ func NewService(db *gorm.DB) *Service {
 }
 
 // Create 创建用户
+// 注意：req.Password现在是前端SHA-256哈希后的值，不是原始密码
 func (s *Service) Create(req *CreateUserRequest) (*User, error) {
 	// 检查用户名是否已存在
 	var existingUser User
@@ -34,7 +35,7 @@ func (s *Service) Create(req *CreateUserRequest) (*User, error) {
 		return nil, ErrUserExists
 	}
 
-	// 加密密码
+	// 加密密码（对前端已哈希的密码再进行bcrypt加密）
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
@@ -98,6 +99,7 @@ func (s *Service) GetByEmail(email string) (*User, error) {
 }
 
 // Authenticate 验证用户凭据
+// 注意：password参数现在是前端SHA-256哈希后的值，不是原始密码
 func (s *Service) Authenticate(username, password string) (*User, error) {
 	// 获取用户（支持用户名或邮箱登录）
 	var user User
@@ -113,7 +115,7 @@ func (s *Service) Authenticate(username, password string) (*User, error) {
 		return nil, ErrUserNotActive
 	}
 
-	// 验证密码
+	// 验证密码（password已经是前端SHA-256哈希后的值）
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
@@ -163,18 +165,19 @@ func (s *Service) Update(id uint, req *UpdateUserRequest) (*User, error) {
 }
 
 // ChangePassword 修改密码
+// 注意：req.OldPassword和req.NewPassword现在都是前端SHA-256哈希后的值
 func (s *Service) ChangePassword(id uint, req *ChangePasswordRequest) error {
 	user, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
 
-	// 验证旧密码
+	// 验证旧密码（旧密码已经是前端哈希后的值）
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
 		return ErrInvalidCredentials
 	}
 
-	// 加密新密码
+	// 加密新密码（对前端已哈希的新密码再进行bcrypt加密）
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)

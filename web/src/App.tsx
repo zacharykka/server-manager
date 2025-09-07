@@ -1,39 +1,80 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { LoginPage } from '@/pages/auth/LoginPage'
+import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { DashboardPage } from '@/pages/DashboardPage'
+import { ProfilePage } from '@/pages/ProfilePage'
+import { ServersPage } from '@/pages/ServersPage'
+import { AddServerPage } from '@/pages/AddServerPage'
+import { EditServerPage } from '@/pages/EditServerPage'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { useAuth } from '@/hooks/useAuth'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isAuthenticated } = useAuth()
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="max-w-md mx-auto p-6 text-center">
-        <h1 className="text-4xl font-bold text-foreground mb-8">
-          Server Manager
-        </h1>
-        <div className="space-y-4">
-          <p className="text-muted-foreground mb-6">
-            Ansible-powered server management platform
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Button onClick={() => setCount((count) => count + 1)}>
-              Click me ({count})
-            </Button>
-            <Button variant="outline">
-              Secondary
-            </Button>
-          </div>
-          <div className="mt-8 p-4 border rounded-lg bg-card">
-            <h2 className="text-lg font-semibold mb-2">Status</h2>
-            <p className="text-sm text-muted-foreground">
-              Frontend configuration complete ✅
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Tailwind CSS + Shadcn/UI ready
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        {/* Public routes */}
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage />
+            )
+          } 
+        />
+        <Route 
+          path="/register" 
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <RegisterPage />
+            )
+          } 
+        />
+
+        {/* Protected routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          
+          {/* Server management routes */}
+          <Route path="servers" element={<ServersPage />} />
+          <Route path="servers/add" element={<AddServerPage />} />
+          <Route path="servers/:id/edit" element={<EditServerPage />} />
+          
+          {/* Other feature routes */}
+          <Route path="ansible" element={<div className="p-8">Ansible管理页面 - 开发中</div>} />
+          <Route path="tasks" element={<div className="p-8">任务历史页面 - 开发中</div>} />
+          
+          {/* Admin only routes */}
+          <Route 
+            path="admin/users" 
+            element={
+              <ProtectedRoute adminOnly>
+                <div className="p-8">用户管理页面 - 开发中</div>
+              </ProtectedRoute>
+            } 
+          />
+        </Route>
+
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Router>
   )
 }
 

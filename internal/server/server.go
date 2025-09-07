@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 	"server-manager/internal/config"
 	"server-manager/internal/middleware"
 	"server-manager/internal/user"
+	"server-manager/internal/server_manager"
 	"strings"
 	"syscall"
 	"time"
@@ -94,7 +97,11 @@ func (s *Server) initDatabase() error {
 	}
 
 	// 自动迁移数据库表
-	if err := s.db.AutoMigrate(&user.User{}); err != nil {
+	if err := s.db.AutoMigrate(
+		&user.User{},
+		&server_manager.Server{},
+		&server_manager.ServerGroup{},
+	); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
 
@@ -112,10 +119,14 @@ func (s *Server) createDefaultAdmin() {
 	// 如果没有用户，创建默认管理员
 	if count == 0 {
 		userService := user.NewService(s.db)
+		
+		// 使用和前端相同的SHA-256哈希算法
+		hashedPassword := hashPasswordWithSalt("admin123")
+		
 		adminReq := &user.CreateUserRequest{
 			Username: "admin",
 			Email:    "admin@example.com",
-			Password: "admin123",
+			Password: hashedPassword, // 使用预哈希的密码
 			Role:     "admin",
 		}
 		
@@ -125,6 +136,19 @@ func (s *Server) createDefaultAdmin() {
 			log.Println("Default admin user created: admin/admin123")
 		}
 	}
+}
+
+// hashPasswordWithSalt 使用和前端相同的SHA-256+盐值哈希算法
+func hashPasswordWithSalt(password string) string {
+	const CLIENT_SALT = "server-manager-2025-secure-salt"
+	
+	// SHA256(password + salt)
+	hasher := sha256.New()
+	hasher.Write([]byte(password + CLIENT_SALT))
+	hash := hasher.Sum(nil)
+	
+	// 转换为十六进制字符串
+	return hex.EncodeToString(hash)
 }
 
 func (s *Server) setupRoutes() {
@@ -143,6 +167,11 @@ func (s *Server) setupRoutes() {
 		time.Duration(s.config.Auth.TokenDuration)*time.Hour,
 	)
 	authHandler := auth.NewHandler(userService, jwtManager)
+
+	// 服务器管理服务
+	serverManagerService := server_manager.NewService(s.db)
+	sshService := server_manager.NewSSHService()
+	serverManagerHandler := server_manager.NewHandler(serverManagerService, sshService)
 
 	// API v1 routes
 	v1 := s.router.Group("/api/v1")
@@ -213,6 +242,33 @@ func (s *Server) setupRoutes() {
 				admin.PUT("/users/:id", authHandler.UpdateUser)
 				admin.DELETE("/users/:id", authHandler.DeleteUser)
 			}
+
+			// 服务器管理路由（需要认证）
+			servers := authenticated.Group("/servers")
+			{
+				servers.POST("", serverManagerHandler.CreateServer)
+				servers.GET("", serverManagerHandler.ListServers)
+				servers.GET("/:id", serverManagerHandler.GetServer)
+				servers.PUT("/:id", serverManagerHandler.UpdateServer)
+				servers.DELETE("/:id", serverManagerHandler.DeleteServer)
+				servers.POST("/:id/test", serverManagerHandler.TestServerConnection)
+			}
+
+			// 服务器组管理路由（需要认证）
+			serverGroups := authenticated.Group("/server-groups")
+			{
+				serverGroups.POST("", serverManagerHandler.CreateServerGroup)
+				serverGroups.GET("", serverManagerHandler.ListServerGroups)
+				serverGroups.GET("/:id", serverManagerHandler.GetServerGroup)
+				serverGroups.PUT("/:id", serverManagerHandler.UpdateServerGroup)
+				serverGroups.DELETE("/:id", serverManagerHandler.DeleteServerGroup)
+			}
+
+			// SSH连接测试（不保存服务器）
+			authenticated.POST("/test-ssh", serverManagerHandler.TestSSHConnection)
+			
+			// 服务器统计信息
+			authenticated.GET("/server-stats", serverManagerHandler.GetServerStats)
 		}
 	}
 
