@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	Redis    RedisConfig    `yaml:"redis"`
 	Auth     AuthConfig     `yaml:"auth"`
+	Ansible  AnsibleConfig  `yaml:"ansible"`
 }
 
 type ServerConfig struct {
@@ -42,6 +43,14 @@ type AuthConfig struct {
 	TokenDuration int    `yaml:"token_duration"` // hours
 }
 
+type AnsibleConfig struct {
+	Path       string `yaml:"path"`        // Ansible命令路径
+	WorkDir    string `yaml:"work_dir"`    // 工作目录
+	TempDir    string `yaml:"temp_dir"`    // 临时文件目录
+	Timeout    int    `yaml:"timeout"`     // 命令执行超时时间（秒）
+	Verbose    bool   `yaml:"verbose"`     // 是否启用详细输出
+}
+
 func Load() (*Config, error) {
 	config := &Config{
 		Server: ServerConfig{
@@ -69,6 +78,13 @@ func Load() (*Config, error) {
 			JWTSecret:     getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 			TokenDuration: getEnvAsInt("TOKEN_DURATION", 24),
 		},
+		Ansible: AnsibleConfig{
+			Path:    getEnv("ANSIBLE_PATH", ""),
+			WorkDir: getEnv("ANSIBLE_WORK_DIR", "./"),
+			TempDir: getEnv("ANSIBLE_TEMP_DIR", ""),
+			Timeout: getEnvAsInt("ANSIBLE_TIMEOUT", 30),
+			Verbose: getEnvAsBool("ANSIBLE_VERBOSE", true),
+		},
 	}
 
 	return config, nil
@@ -87,6 +103,16 @@ func getEnvAsInt(key string, defaultValue int) int {
 			return value
 		}
 		fmt.Printf("Warning: Invalid value for %s, using default: %d\n", key, defaultValue)
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if valueStr := os.Getenv(key); valueStr != "" {
+		if value, err := strconv.ParseBool(valueStr); err == nil {
+			return value
+		}
+		fmt.Printf("Warning: Invalid boolean value for %s, using default: %t\n", key, defaultValue)
 	}
 	return defaultValue
 }

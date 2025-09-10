@@ -6,6 +6,7 @@ import { ProfilePage } from '@/pages/ProfilePage'
 import { ServersPage } from '@/pages/ServersPage'
 import { AddServerPage } from '@/pages/AddServerPage'
 import { EditServerPage } from '@/pages/EditServerPage'
+import { AnsiblePage } from '@/pages/AnsiblePage'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useAuth } from '@/hooks/useAuth'
@@ -56,8 +57,10 @@ function App() {
           <Route path="servers/add" element={<AddServerPage />} />
           <Route path="servers/:id/edit" element={<EditServerPage />} />
           
+          {/* Ansible management routes */}
+          <Route path="ansible" element={<AnsiblePage />} />
+          
           {/* Other feature routes */}
-          <Route path="ansible" element={<div className="p-8">Ansible管理页面 - 开发中</div>} />
           <Route path="tasks" element={<div className="p-8">任务历史页面 - 开发中</div>} />
           
           {/* Admin only routes */}

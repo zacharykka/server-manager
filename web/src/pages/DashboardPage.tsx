@@ -9,10 +9,31 @@ import {
 } from "@/components/ui/card"
 import { useAuth } from '@/hooks/useAuth'
 import { useServerStats } from '@/hooks/useServer'
+import { useAnsibleSystem } from '@/hooks/useAnsible'
+import { useSystemStatus } from '@/hooks/useSystemStatus'
 
 export function DashboardPage() {
   const { user } = useAuth()
   const { stats, loading: statsLoading } = useServerStats()
+  const { systemStatus: ansibleSystemStatus, loading: ansibleLoading, error: ansibleError } = useAnsibleSystem()
+  const { systemStatus, loading: systemStatusLoading, refreshSystemStatus } = useSystemStatus()
+
+  // 获取状态显示的通用函数
+  const getStatusDisplay = (status: 'online' | 'offline' | 'unknown', loading = false, message?: string) => {
+    if (loading) {
+      return { text: '● 检查中...', color: 'text-blue-600', title: '正在检查状态...' }
+    }
+    
+    switch (status) {
+      case 'online':
+        return { text: '● 正常', color: 'text-green-600', title: message || '服务正常运行' }
+      case 'offline':
+        return { text: '● 异常', color: 'text-red-600', title: message || '服务不可用' }
+      case 'unknown':
+      default:
+        return { text: '● 未知', color: 'text-gray-600', title: message || '状态未知' }
+    }
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -83,16 +104,42 @@ export function DashboardPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm">后端服务</span>
-              <span className="text-sm text-green-600">● 运行中</span>
+              <span 
+                className={`text-sm cursor-help ${getStatusDisplay(systemStatus?.backend.status || 'unknown', systemStatusLoading, systemStatus?.backend.message).color}`}
+                title={getStatusDisplay(systemStatus?.backend.status || 'unknown', systemStatusLoading, systemStatus?.backend.message).title}
+              >
+                {getStatusDisplay(systemStatus?.backend.status || 'unknown', systemStatusLoading, systemStatus?.backend.message).text}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">数据库连接</span>
-              <span className="text-sm text-green-600">● 正常</span>
+              <span 
+                className={`text-sm cursor-help ${getStatusDisplay(systemStatus?.database.status || 'unknown', systemStatusLoading, systemStatus?.database.message).color}`}
+                title={getStatusDisplay(systemStatus?.database.status || 'unknown', systemStatusLoading, systemStatus?.database.message).title}
+              >
+                {getStatusDisplay(systemStatus?.database.status || 'unknown', systemStatusLoading, systemStatus?.database.message).text}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Ansible</span>
-              <span className="text-sm text-yellow-600">● 待配置</span>
+              <span 
+                className={`text-sm cursor-help ${getStatusDisplay(systemStatus?.ansible.status || 'unknown', systemStatusLoading, systemStatus?.ansible.message).color}`}
+                title={getStatusDisplay(systemStatus?.ansible.status || 'unknown', systemStatusLoading, systemStatus?.ansible.message).title}
+              >
+                {getStatusDisplay(systemStatus?.ansible.status || 'unknown', systemStatusLoading, systemStatus?.ansible.message).text}
+              </span>
             </div>
+            {systemStatus && (
+              <div className="pt-2 border-t">
+                <button
+                  onClick={refreshSystemStatus}
+                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  disabled={systemStatusLoading}
+                >
+                  🔄 {systemStatusLoading ? '检查中...' : '刷新状态'}
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

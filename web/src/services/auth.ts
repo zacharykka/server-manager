@@ -72,11 +72,9 @@ export const authApi = {
   },
 
   logout: async () => {
-    try {
-      await api.post('/api/v1/auth/logout')
-    } catch (error) {
-      console.error('Logout API call failed:', error)
-    }
+    // JWT-based authentication typically handles logout on client side
+    // No server-side API call needed since we just need to clear the token
+    return Promise.resolve()
   }
 }
 

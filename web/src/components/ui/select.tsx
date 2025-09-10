@@ -15,9 +15,10 @@ interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 interface SelectContentProps {
   children: React.ReactNode
+  className?: string
 }
 
-interface SelectItemProps extends React.LiHTMLAttributes<HTMLLIElement> {
+interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
   value: string
   children: React.ReactNode
 }
@@ -50,7 +51,7 @@ const Select = React.forwardRef<HTMLDivElement, {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleSelect = (itemValue: string) => {
+  const onSelect = (itemValue: string) => {
     setSelectedValue(itemValue)
     setIsOpen(false)
     if (onValueChange) {
@@ -62,12 +63,21 @@ const Select = React.forwardRef<HTMLDivElement, {
     <div ref={selectRef} className="relative">
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
-            isOpen,
-            setIsOpen,
-            selectedValue,
-            handleSelect,
-          })
+          // Only pass props to components that need them
+          const childProps: any = {}
+          
+          if (child.type === SelectTrigger) {
+            childProps.isOpen = isOpen
+            childProps.setIsOpen = setIsOpen
+            childProps.selectedValue = selectedValue
+          } else if (child.type === SelectContent) {
+            childProps.isOpen = isOpen
+            childProps.onSelect = onSelect
+          } else if (child.type === SelectValue) {
+            childProps.selectedValue = selectedValue
+          }
+          
+          return React.cloneElement(child as React.ReactElement<any>, childProps)
         }
         return child
       })}
@@ -80,23 +90,28 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps & {
   isOpen?: boolean
   setIsOpen?: (open: boolean) => void
   selectedValue?: string
-}>(({ className, children, isOpen, setIsOpen, selectedValue, ...props }, ref) => (
-  <button
-    ref={ref}
-    type="button"
-    className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-      className
-    )}
-    onClick={() => setIsOpen && setIsOpen(!isOpen)}
-    {...props}
-  >
-    {children}
-    <span className="text-gray-400">
-      {isOpen ? "▲" : "▼"}
-    </span>
-  </button>
-))
+}>(({ className, children, isOpen, setIsOpen, selectedValue, ...props }, ref) => {
+  // Filter out custom props before spreading to DOM element
+  const { isOpen: _, setIsOpen: __, selectedValue: ___, ...domProps } = props as any
+  
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={cn(
+        "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      onClick={() => setIsOpen && setIsOpen(!isOpen)}
+      {...domProps}
+    >
+      {children}
+      <span className="text-gray-400">
+        {isOpen ? "▲" : "▼"}
+      </span>
+    </button>
+  )
+})
 SelectTrigger.displayName = "SelectTrigger"
 
 const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps & {
@@ -116,8 +131,8 @@ SelectValue.displayName = "SelectValue"
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps & {
   isOpen?: boolean
-  handleSelect?: (value: string) => void
-}>(({ className, children, isOpen, handleSelect }, ref) => {
+  onSelect?: (value: string) => void
+}>(({ className, children, isOpen, onSelect }, ref) => {
   if (!isOpen) return null
 
   return (
@@ -131,9 +146,14 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps & {
       <div className="p-1">
         {React.Children.map(children, (child) => {
           if (React.isValidElement(child)) {
-            return React.cloneElement(child as React.ReactElement<any>, {
-              handleSelect,
-            })
+            // Only pass onSelect to SelectItem components
+            const childProps: any = {}
+            
+            if (child.type === SelectItem) {
+              childProps.onSelect = onSelect
+            }
+            
+            return React.cloneElement(child as React.ReactElement<any>, childProps)
           }
           return child
         })}
@@ -144,20 +164,25 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps & {
 SelectContent.displayName = "SelectContent"
 
 const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps & {
-  handleSelect?: (value: string) => void
-}>(({ className, value, children, handleSelect, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-      className
-    )}
-    onClick={() => handleSelect && handleSelect(value)}
-    {...props}
-  >
-    {children}
-  </div>
-))
+  onSelect?: (value: string) => void
+}>(({ className, value, children, onSelect, ...props }, ref) => {
+  // Filter out custom props before spreading to DOM element
+  const { onSelect: _, ...domProps } = props as any
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+        className
+      )}
+      onClick={() => onSelect && onSelect(value)}
+      {...domProps}
+    >
+      {children}
+    </div>
+  )
+})
 SelectItem.displayName = "SelectItem"
 
 export {

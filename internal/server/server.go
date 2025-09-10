@@ -14,6 +14,7 @@ import (
 	"server-manager/internal/middleware"
 	"server-manager/internal/user"
 	"server-manager/internal/server_manager"
+	"server-manager/internal/ansible"
 	"strings"
 	"syscall"
 	"time"
@@ -101,6 +102,10 @@ func (s *Server) initDatabase() error {
 		&user.User{},
 		&server_manager.Server{},
 		&server_manager.ServerGroup{},
+		&ansible.AdhocExecution{},
+		&ansible.PlaybookExecution{},
+		&ansible.Inventory{},
+		&ansible.Playbook{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
@@ -172,6 +177,11 @@ func (s *Server) setupRoutes() {
 	serverManagerService := server_manager.NewService(s.db)
 	sshService := server_manager.NewSSHService()
 	serverManagerHandler := server_manager.NewHandler(serverManagerService, sshService)
+
+	// Ansible服务
+	ansibleExecutor := ansible.NewCommandExecutorWithConfig(s.config)
+	ansibleService := ansible.NewAnsibleService(s.db, ansibleExecutor)
+	ansibleHandler := ansible.NewHandler(ansibleService)
 
 	// API v1 routes
 	v1 := s.router.Group("/api/v1")
@@ -269,6 +279,9 @@ func (s *Server) setupRoutes() {
 			
 			// 服务器统计信息
 			authenticated.GET("/server-stats", serverManagerHandler.GetServerStats)
+
+			// Ansible管理路由
+			ansibleHandler.RegisterRoutes(authenticated)
 		}
 	}
 
